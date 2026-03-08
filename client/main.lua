@@ -74,7 +74,12 @@ local function spawnvehicle(data)
         
         local vehEntity
         utils.createPlyVeh(vehData.model, data.coords, function(veh) vehEntity = veh end, true, vehData.mods)
-        
+
+        -- Aguarda o veículo existir antes de qualquer operação
+        while not vehEntity do
+            Wait(100)
+        end
+
         SetVehicleOnGroundProperly(vehEntity)
 
         if (not vehData.mods or json.encode(vehData.mods) == "[]") and
@@ -90,10 +95,6 @@ local function spawnvehicle(data)
         
         if vehData.deformation or data.deformation then
             Deformation.set(vehEntity, vehData.deformation or data.deformation)
-        end
-
-        while not vehEntity do
-            Wait(100)
         end
 
         Entity(vehEntity).state:set('vehlabel', vehData.vehicle_name or data.vehicle_name)
@@ -383,9 +384,9 @@ local function getAvailableSP(points, ignoreDist, defaultCoords)
     if type(points) ~= "table" and ignoreDist then
         return points
     end
-    assert(
-        type(points) == "table" and points[1], 'Invalid "points" parameter: Expected a non-empty array table.'
-    )
+    if not points or type(points) ~= "table" or not points[1] then
+        return nil
+    end
     for k, v in pairs(points) do
         local sp = vec(v.x, v.y, v.z, v.w)
         local vehEntity = lib.getClosestVehicle(sp.xyz, 2.0, true)
@@ -487,6 +488,7 @@ local function openMenu(data)
         local vehProp = vd.vehicle
         local vehModel = vd.model
         local plate = utils.string.trim(vd.plate)
+        local realplate = plate  -- preservar placa real para queries no DB
         local vehDeformation = vd.deformation
         local gState = vd.state
         local pName = vd.owner or "Unkown Players"
@@ -581,7 +583,7 @@ local function openMenu(data)
                         fuel = fuel,
                         body = body,
                         model = vehModel,
-                        plate = plate,
+                        plate = realplate,
                         coords = defaultcoords,
                         garage = data.garage,
                         vehName = vehicleLabel,
@@ -661,7 +663,11 @@ local function storeVeh(data)
         if GetResourceState('tokyo_Qcarkeys') == 'started' and Config.GiveKeys.onspawn then
             exports.tokyo_Qcarkeys:RemoveKeyItem(plate)
         end
-        
+
+        -- Avisar o servidor ANTES de deletar para evitar race condition
+        TriggerServerEvent('rhd_garage:server:updateState', {plate = plate, state = 1, garage = data.garage})
+        Wait(150)
+
         local netId = NetworkGetNetworkIdFromEntity(vehicle)
         local veh = NetworkGetEntityFromNetworkId(netId)
         SetNetworkIdCanMigrate(netId, true)
@@ -674,7 +680,6 @@ local function storeVeh(data)
             DeleteEntity(vehicle)
         end
         
-        TriggerServerEvent('rhd_garage:server:updateState', {plate = plate, state = 1, garage = data.garage})
         utils.notify(locale('notify.success.store_veh'), 'success')
     end
 end

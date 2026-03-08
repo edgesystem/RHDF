@@ -81,11 +81,14 @@ Deformation.set = function (vehicle, deformation)
 
     if deformation and next(deformation) then
         for k, v in pairs(deformation) do
-			local x, y, z, d = v.offset.x, v.offset.y, v.offset.z, (v.damage * damageMult)
-			if d > 14.0 then
-				d  = 14.5
-			end
-            SetVehicleDamage(vehicle, x, y, z, d, 1000.0, true)
+            local x, y, z, d = v.offset.x, v.offset.y, v.offset.z, (v.damage * damageMult)
+            if d > 14.0 then
+                d = 14.5
+            end
+            if d > 0.0 then
+                SetVehicleDamage(vehicle, x, y, z, d, 1000.0, true)
+                Wait(0)
+            end
         end
     end
  

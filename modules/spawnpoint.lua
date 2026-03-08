@@ -311,11 +311,12 @@ function spawnPoint.create(zone, required, existingPoint, vehicleTypes)
                         local vm = NVL[vehType][vehIndex]
                         local pv = createPV(vm, rc)
                         
-                        vc[#vc+1] = rc
-                        svp[#vc] = vm
+                        local idx = #vc + 1
+                        vc[idx] = rc
+                        svp[idx] = vm
                         
                         vehCreated[#vehCreated+1] = pv
-                        utils.notify("location successfully created " .. #vc, "success", 8000)
+                        utils.notify("location successfully created " .. idx, "success", 8000)
                     else
                         utils.notify("Não pode adicionar pontos de desova fora da zona", "error", 8000)
                     end

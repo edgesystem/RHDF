@@ -51,8 +51,8 @@ end)
 --- Event
 RegisterNetEvent("rhd_garage:server:removeTemp", function ( data )
     if GetInvokingResource() then return end
-    local player = exports.qbx_core:GetPlayer(source)
-    local citizenid = player.PlayerData.citizenid
+    local citizenid = fw.gi(source)
+    if not citizenid then return end
     if tempVehicle[citizenid] == data.model then
         tempVehicle[citizenid] = nil
     end
@@ -66,11 +66,16 @@ lib.addCommand('removeTemp', {
     }
 }, function(source, args)
     if args.id then
-        local player = exports.qbx_core:GetPlayer(tonumber(args.id))
-        local citizenid = player.PlayerData.citizenid
+        local tid = tonumber(args.id)
+        local citizenid = fw.gi(tid)
+        local playerName = fw.gn(tid)
+        if not citizenid then
+            lib.notify(source, {description = "Jogador não encontrado.", type = "error", duration = 10000})
+            return
+        end
         tempVehicle[citizenid] = nil
-        lib.notify(tonumber(args.id), {description = "Seus veículos de aluguel foram recuperados.", type = "success", duration = 10000})
-        lib.notify(source, {description = "Garagem recuperada do id: " .. args.id .. " cidadão: " .. citizenid .. " de nome " .. player.PlayerData.name .. ".", type = "success", duration = 10000})
+        lib.notify(tid, {description = "Seus veículos de aluguel foram recuperados.", type = "success", duration = 10000})
+        lib.notify(source, {description = "Garagem recuperada do id: " .. args.id .. " cidadão: " .. citizenid .. " de nome " .. playerName .. ".", type = "success", duration = 10000})
     else
         lib.notify(source, {description = "ID inválido.", type = "error", duration = 10000})
     end
@@ -90,7 +95,16 @@ end)
 RegisterNetEvent("rhd_garage:server:saveCustomVehicleName", function (fileData)
     if GetInvokingResource() then return end
     if type(fileData) ~= "table" or type(fileData) == "nil" then return end
-    return storage.SaveVehicleName(fileData)
+    storage.SaveVehicleName(fileData)
+    -- Persistir também no banco para sobreviver a restarts
+    for plate, data in pairs(fileData) do
+        if plate and data and data.name then
+            MySQL.update(
+                'UPDATE player_vehicles SET vehicle_name = ? WHERE plate = ?',
+                { data.name, plate }
+            )
+        end
+    end
 end)
 
 local vehicleSpawnCooldown = {}
